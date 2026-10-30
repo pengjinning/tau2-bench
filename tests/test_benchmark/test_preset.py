@@ -43,9 +43,9 @@ def test_resolves_ordinary_configs_with_exact_ids_and_approved_defaults(
         assert "voice_instruction_version" not in AudioNativeConfig.model_fields
         assert config.communicate_scoring.scorer == "semantic"
         judge = config.communicate_scoring.judge
-        assert judge.model == "gpt-5.5"
+        assert judge.model == "zai/glm-5.3"
         assert judge.model_args == {"reasoning_effort": "low"}
-        assert config.llm_user == "openai/gpt-5.5"
+        assert config.llm_user == "zai/glm-5.3"
         assert config.llm_args_user == {"reasoning_effort": "low"}
         assert config.audio_native_config.max_steps_seconds == 2400
         assert config.audio_native_config.voice == (

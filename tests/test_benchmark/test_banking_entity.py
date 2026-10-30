@@ -38,7 +38,7 @@ def test_banking_cells_pin_extension_and_alltools(tmp_path):
     for config in plan.configs:
         config.validate()
         assert config.retrieval_config == "alltools"
-        assert config.llm_user == "openai/gpt-5.5"
+        assert config.llm_user == "zai/glm-5.3"
         assert config.audio_native_config.max_steps_seconds == 2400
     assert not (tmp_path / "banking").exists()
 

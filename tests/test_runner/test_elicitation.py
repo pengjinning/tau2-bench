@@ -47,7 +47,7 @@ def test_elicitation_defaults_resolve_for_programmatic_runs_and_roundtrip():
     assert agent_directed.elicitation.rate == 1
     assert scaffolded.elicitation.rate == 1
     assert agent_directed.audio_native_config.max_steps_seconds == 240
-    assert agent_directed.llm_user == "gpt-5.5"
+    assert agent_directed.llm_user == "zai/glm-5.3"
     assert agent_directed.llm_args_user["reasoning_effort"] == "low"
     assert (
         VoiceRunConfig.model_validate_json(agent_directed.model_dump_json())

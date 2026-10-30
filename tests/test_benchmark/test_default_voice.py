@@ -116,7 +116,7 @@ def test_normal_voice_cli_resolves_released_default(
     assert len(plan.frame.cells) == 18
     assert settings.workers == 1
     assert options == {"dry_run": True}
-    assert all(config.llm_user == "openai/gpt-5.5" for config in plan.configs)
+    assert all(config.llm_user == "zai/glm-5.3" for config in plan.configs)
     assert all(
         config.llm_args_user == {"reasoning_effort": "low"} for config in plan.configs
     )
@@ -125,7 +125,7 @@ def test_normal_voice_cli_resolves_released_default(
     )
     assert all(config.audio_native_config.voice == "marin" for config in plan.configs)
     assert all(
-        config.communicate_scoring.judge.model == "gpt-5.5" for config in plan.configs
+        config.communicate_scoring.judge.model == "zai/glm-5.3" for config in plan.configs
     )
     assert f"{calls} calls" in capsys.readouterr().out
     assert not (tmp_path / "matrix").exists()

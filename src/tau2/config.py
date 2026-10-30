@@ -27,8 +27,8 @@ DEFAULT_LANGUAGE = "en"
 # =============================================================================
 DEFAULT_AGENT_IMPLEMENTATION = "llm_agent"
 DEFAULT_USER_IMPLEMENTATION = "user_simulator"
-DEFAULT_LLM_AGENT = "gpt-4.1-2025-04-14"
-DEFAULT_LLM_USER = "gpt-4.1-2025-04-14"
+DEFAULT_LLM_AGENT = "zai/glm-5.3"
+DEFAULT_LLM_USER = "zai/glm-5.3"
 DEFAULT_LLM_TEMPERATURE_AGENT = 0.0
 DEFAULT_LLM_TEMPERATURE_USER = 0.0
 DEFAULT_LLM_ARGS_AGENT = {"temperature": DEFAULT_LLM_TEMPERATURE_AGENT}
@@ -42,22 +42,22 @@ DEFAULT_BANKING_RETRIEVAL_CONFIG = "alltools"
 DEFAULT_ELICITATION_STRATEGY = "agent_directed"
 DEFAULT_ELICITATION_COMPLICATION_RATE = 1.0
 DEFAULT_ELICITATION_MAX_STEPS_SECONDS = 240
-DEFAULT_ELICITATION_LLM_USER = "gpt-5.5"
+DEFAULT_ELICITATION_LLM_USER = "zai/glm-5.3"
 DEFAULT_ELICITATION_LLM_ARGS_USER = {"temperature": 0.0, "reasoning_effort": "low"}
 DEFAULT_INTAKE_TASK_SEED = 20260824
 
-DEFAULT_LLM_NL_ASSERTIONS = "gpt-5.4-mini-2026-03-17"
+DEFAULT_LLM_NL_ASSERTIONS = "zai/glm-5.3-flash"
 DEFAULT_LLM_NL_ASSERTIONS_ARGS = {"reasoning_effort": "low"}
 
-DEFAULT_LLM_ENV_INTERFACE = "gpt-4.1-2025-04-14"
+DEFAULT_LLM_ENV_INTERFACE = "zai/glm-5.3"
 DEFAULT_LLM_ENV_INTERFACE_TEMPERATURE = 0.0
 DEFAULT_LLM_ENV_INTERFACE_ARGS = {"temperature": DEFAULT_LLM_ENV_INTERFACE_TEMPERATURE}
 
 # Semantic communication scoring for every run; independent of the customer model.
-DEFAULT_SEMANTIC_COMMUNICATE_MODEL = "gpt-5.5"
+DEFAULT_SEMANTIC_COMMUNICATE_MODEL = "zai/glm-5.3"
 DEFAULT_SEMANTIC_COMMUNICATE_MODEL_ARGS = {"reasoning_effort": "low"}
 
-DEFAULT_LLM_EVAL_USER_SIMULATOR = "claude-opus-4-5"
+DEFAULT_LLM_EVAL_USER_SIMULATOR = "zai/glm-5.3"
 
 # LLM debug logging
 DEFAULT_LLM_LOG_MODE = "latest"  # Options: "all", "latest"
@@ -118,7 +118,7 @@ DEFAULT_TEXT_STREAMING_CONFIG = {
 # VOICE USER SIMULATOR (fixed versioning + overridable model)
 # =============================================================================
 VOICE_USER_SIMULATOR_VERSION = "v1.1"  # fixed, bump on changes
-VOICE_USER_SIMULATOR_DECISION_MODEL = "gpt-5.4-mini-2026-03-17"  # overridable
+VOICE_USER_SIMULATOR_DECISION_MODEL = "zai/glm-5.3-flash"  # overridable
 VOICE_USER_SIMULATOR_DECISION_MODEL_ARGS = {"reasoning_effort": "low"}
 DEFAULT_SPEECH_COMPLEXITY = "regular"  # overridable: "control", "regular"
 DEFAULT_CHANNEL_EFFECTS_MODE = "regular"
@@ -317,7 +317,7 @@ SPELLING_NORMALIZATION_VERSION = "explicit-spelling-v1"
 DEFAULT_VOICE_BENCHMARK = "voice"
 TEXT_BENCHMARK = "text"
 DEFAULT_BENCHMARK_WORKERS = 1
-DEFAULT_BENCHMARK_USER_MODEL = "openai/gpt-5.5"
+DEFAULT_BENCHMARK_USER_MODEL = "zai/glm-5.3"
 DEFAULT_BENCHMARK_USER_ARGS = {"reasoning_effort": "low"}
 DEFAULT_VOICE_BENCHMARK_MAX_STEPS_SECONDS = 2400
 DEFAULT_VOICE_BENCHMARK_OPENAI_VOICE = "marin"

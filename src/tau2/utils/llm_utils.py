@@ -78,6 +78,58 @@ litellm.drop_params = True
 # Exceptions are still raised and logged.
 litellm.suppress_debug_info = True
 
+# Route the LiteLLM `zai` provider to the domestic Zhipu endpoint when a
+# bigmodel.cn key is present. LiteLLM only knows the `zai` prefix (default
+# https://api.z.ai/api/paas/v4, international Z.ai); domestic keys from
+# open.bigmodel.cn use the same OpenAI-compatible API at a different base and
+# must not be sent to the international endpoint.
+# Resolution: an explicit ZAI_API_BASE wins for the base. Otherwise
+# ZAI_API_KEY alone keeps the international default; ZHIPUAI_API_KEY (with
+# ZAI_API_KEY unset) reuses its key and points at open.bigmodel.cn; with no
+# key at all, the domestic endpoint is the project default.
+if os.getenv("ZHIPUAI_API_KEY") and not os.getenv("ZAI_API_KEY"):
+    os.environ.setdefault("ZAI_API_KEY", os.environ["ZHIPUAI_API_KEY"])
+    os.environ.setdefault("ZAI_API_BASE", "https://open.bigmodel.cn/api/paas/v4")
+elif not os.getenv("ZAI_API_KEY") and not os.getenv("ZAI_API_BASE"):
+    os.environ.setdefault("ZAI_API_BASE", "https://open.bigmodel.cn/api/paas/v4")
+
+# Register GLM pricing for Z.ai models missing from the pinned LiteLLM price
+# map (older local backups predate glm-5.3). Values mirror the upstream map,
+# sourced from https://docs.z.ai/guides/overview/pricing
+litellm.register_model(
+    {
+        "zai/glm-5.3": {
+            "max_tokens": 1_000_000,
+            "max_input_tokens": 1_000_000,
+            "max_output_tokens": 128_000,
+            "input_cost_per_token": 1.4e-06,
+            "output_cost_per_token": 4.4e-06,
+            "cache_read_input_token_cost": 2.6e-07,
+            "litellm_provider": "zai",
+            "mode": "chat",
+            "supports_function_calling": True,
+            "supports_prompt_caching": True,
+            "supports_reasoning": True,
+            "supports_tool_choice": True,
+        },
+        "zai/glm-5.3-flash": {
+            "max_tokens": 1_048_576,
+            "max_input_tokens": 1_048_576,
+            "max_output_tokens": 128_000,
+            "input_cost_per_token": 1.5e-07,
+            "output_cost_per_token": 5.0e-07,
+            "cache_read_input_token_cost": 3.0e-08,
+            "litellm_provider": "zai",
+            "mode": "chat",
+            "supports_function_calling": True,
+            "supports_prompt_caching": True,
+            "supports_reasoning": True,
+            "supports_tool_choice": True,
+            "supports_vision": True,
+        },
+    }
+)
+
 warnings.filterwarnings(
     "ignore",
     message="Pydantic serializer warnings:",
@@ -131,6 +183,10 @@ def get_response_cost(response: ModelResponse) -> float:
         response.model
     )  # FIXME: Check Litellm, passing the model to completion_cost doesn't work.
     model = response.model.removeprefix("openai/").removeprefix("responses/")
+    # The Zhipu API returns bare model names (e.g. "glm-5.3"); restore the
+    # `zai/` prefix LiteLLM needs to resolve the provider and its pricing.
+    if model.startswith("glm-") and "/" not in model:
+        response.model = f"zai/{model}"
     if (
         model in ("gpt-5.5", "gpt-5.5-2026-04-23")
         and response.get("service_tier") in (None, "default")

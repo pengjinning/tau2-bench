@@ -42,7 +42,7 @@ class VerboseAgent(HalfDuplexAgent[list]):
         self,
         tools: list[Tool],
         domain_policy: str,
-        llm: str = "openai/gpt-4.1-mini",
+        llm: str = "zai/glm-5.3-flash",
         llm_args: Optional[dict] = None,
     ):
         super().__init__(tools=tools, domain_policy=domain_policy)
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     agent = VerboseAgent(
         tools=env.get_tools(),
         domain_policy=env.get_policy(),
-        llm="openai/gpt-4.1-mini",
+        llm="zai/glm-5.3-flash",
     )
 
     # Build the user simulator (from the registry, since we're not customizing it)
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         "user_simulator",
         env,
         task,
-        llm="openai/gpt-4.1-mini",
+        llm="zai/glm-5.3-flash",
     )
 
     # Wire into an orchestrator

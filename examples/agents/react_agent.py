@@ -103,7 +103,7 @@ class ReActAgent(HalfDuplexAgent[ReActAgentState]):
         self,
         tools: list[Tool],
         domain_policy: str,
-        llm: str = "openai/gpt-4.1-mini",
+        llm: str = "zai/glm-5.3-flash",
         llm_args: Optional[dict] = None,
     ):
         super().__init__(tools=tools, domain_policy=domain_policy)
@@ -196,7 +196,7 @@ def create_react_agent(tools, domain_policy, **kwargs):
     return ReActAgent(
         tools=tools,
         domain_policy=domain_policy,
-        llm=kwargs.get("llm", "openai/gpt-4.1-mini"),
+        llm=kwargs.get("llm", "zai/glm-5.3-flash"),
         llm_args=kwargs.get("llm_args"),
     )
 
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         TextRunConfig(
             domain="mock",
             agent="react_agent",
-            llm_agent="openai/gpt-4.1-mini",
+            llm_agent="zai/glm-5.3-flash",
         ),
         tasks[0],
         seed=42,

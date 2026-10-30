@@ -149,7 +149,9 @@ class BaseOrchestrator(ABC, Generic[BaseAgentT, BaseUserT, TrajectoryItemT]):
         if self.call_context is None:
             return None
         return AssistantMessage(
-            role="assistant", content=self.call_context.language.agent_greeting
+            role="assistant",
+            content=self.call_context.language.agent_greeting,
+            cost=0.0,
         )
 
     @abstractmethod

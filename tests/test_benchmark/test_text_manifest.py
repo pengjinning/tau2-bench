@@ -72,7 +72,7 @@ def test_text_benchmark_resolves_ordinary_text_configs(tmp_path):
     (config,) = plan.configs
     assert type(config) is TextRunConfig
     assert isinstance(config.benchmark.conditions, TextBenchmarkConditions)
-    assert config.llm_user == "openai/gpt-5.5"
+    assert config.llm_user == "zai/glm-5.3"
     assert config.llm_args_user == {"reasoning_effort": "low"}
     assert config.communicate_scoring.scorer == "semantic"
     assert len(config.task_ids) == 50

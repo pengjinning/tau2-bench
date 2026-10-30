@@ -647,7 +647,7 @@ def test_cli_resolves_elicitation_defaults_and_explicit_overrides(monkeypatch):
     cli.main()
     assert captured[-1].elicitation.rate == 1
     assert captured[-1].elicitation.strategy == ElicitationStrategy.AGENT_DIRECTED
-    assert captured[-1].llm_user == "gpt-5.5"
+    assert captured[-1].llm_user == "zai/glm-5.3"
     assert captured[-1].audio_native_config.max_steps_seconds == 240
     monkeypatch.setattr(
         sys,
