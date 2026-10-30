@@ -50,7 +50,10 @@ call (`voice-v2-experience-call-v2`, in `benchmark-quality.json`): a call
 passes when at most 25% of its eligible agent utterances have an issue. It is
 *unscored*, never failed, unless both judges returned complete verdicts that
 pair every utterance. Live speech recorded without a transcript is a recording
-gap: those utterances are left out and the rest of the call is scored. The leaderboard shows it as Generation quality and rates
+gap: those utterances are left out and the rest of the call is scored. So is
+an utterance whose speech-fidelity clip still hit the judge's output limit
+after retries, unless naturalness flagged it, in which case it counts as an
+issue. The leaderboard shows it as Generation quality and rates
 it as passed / (passed + failed). Keys such as `experience` and the paper's
 `experience.json` keep the old name.
 
@@ -83,7 +86,9 @@ others; `tau2 judges summarize` lists, for each cell and measure, how many calls
 it applies to, how many were judged, and the pass and fail counts. Calls a
 measure cannot judge because recorded Live speech has no transcript are
 excluded from it and counted as `input_excluded_calls`; they do not block a
-submission.
+submission. Speech-fidelity clips whose judge reply hit its output limit are
+counted as `output_limit_units` and do not block either, up to 0.1% of a
+package's clips.
 
 ## Pack
 

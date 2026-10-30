@@ -144,6 +144,14 @@ the same run, for units whose reply was incomplete or invalid (`--unit-retries`,
 default 2, keeping every successful unit); rerun it to retry what is left. A
 measure whose applicable calls are all excluded still blocks.
 
+The speech-fidelity judge runs at temperature 0, so a clip whose reply reaches
+the judge's output limit (usually a long, looping agent turn) does so on every
+retry. Such clips are reported as `output_limit_units` and do not block: the
+utterance counts as a Generation-quality issue when naturalness flagged it and
+is otherwise left out. At most 0.1% of a package's speech-fidelity clips may
+be left out this way; above that, `tau2 submit prepare` fails and lists the
+calls, and a maintainer reviews them.
+
 Only the default production judge catalog is accepted. Verdicts made with
 `--registry` bundles have a different catalog revision and will not validate.
 

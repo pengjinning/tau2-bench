@@ -116,8 +116,13 @@ def _verdict(measure, units, unit_errors=(), error=None) -> StoredVerdict:
                     for unit_id, opportunity, violation in units
                 ],
                 "unit_errors": [
-                    {"unit_id": unit_id, "kind": kind, "error": "fixture"}
-                    for unit_id, kind in unit_errors
+                    {
+                        "unit_id": unit_id,
+                        "kind": kind,
+                        "error": "fixture",
+                        "finish_reason": finish_reason[0] if finish_reason else None,
+                    }
+                    for unit_id, kind, *finish_reason in unit_errors
                 ],
             },
             "error": error,
@@ -329,6 +334,50 @@ def test_live_speech_without_a_transcript_is_left_out():
     }
     assert call_quality.experience_counts(sim, only_gaps) == (0, 0)
     assert call_quality.experience_outcome(0, 0) == CallOutcome.UNSCORED
+
+
+def test_fidelity_output_limit_leaves_out_only_its_utterance():
+    """A clip the fidelity judge could not finish drops that utterance alone."""
+    sim = _simulation()
+    limit = [("live-segment:2", "response", "length")]
+
+    def verdicts(flagged):
+        units = [
+            ("live-segment:0", True, True),
+            ("live-segment:1", True, False),
+            ("live-segment:2", True, flagged),
+        ]
+        return {
+            "naturalness": _verdict("naturalness", units),
+            "speech_fidelity": _verdict(
+                "speech_fidelity", [(u, True, False) for u, _, _ in units[:2]], limit
+            ),
+        }
+
+    # Unflagged by naturalness: left out, the other two utterances are scored.
+    assert call_quality.experience_counts(sim, verdicts(False)) == (2, 1)
+    # Flagged by naturalness: a known issue, so it still counts.
+    assert call_quality.experience_counts(sim, verdicts(True)) == (3, 2)
+    # Every utterance left out: nothing to score.
+    only_limit = {
+        "naturalness": _verdict("naturalness", [("live-segment:2", True, False)]),
+        "speech_fidelity": _verdict("speech_fidelity", [], limit),
+    }
+    assert call_quality.experience_counts(sim, only_limit) == (0, 0)
+    assert call_quality.experience_outcome(0, 0) == CallOutcome.UNSCORED
+    # The same error from naturalness, or a fidelity timeout, still blocks.
+    blocked = verdicts(False)
+    blocked["naturalness"] = _verdict(
+        "naturalness", [("live-segment:0", True, False)], limit
+    )
+    assert call_quality.experience_counts(sim, blocked)[1] is None
+    timed_out = verdicts(False)
+    timed_out["speech_fidelity"] = _verdict(
+        "speech_fidelity",
+        [("live-segment:0", True, False), ("live-segment:1", True, False)],
+        [("live-segment:2", "response")],
+    )
+    assert call_quality.experience_counts(sim, timed_out) == (3, None)
 
 
 def test_non_live_units_pair_by_agent_chunk_groups():

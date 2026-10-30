@@ -14,6 +14,7 @@ from tau2.data_model.judges import (
     StoredVerdict,
     SuitePlan,
     SuiteResult,
+    is_fidelity_output_limit,
 )
 from tau2.judges.run_evidence import is_live_input_call_error
 from tau2.judges.suite import JudgeExecutionConfig, judge_saved_run
@@ -35,7 +36,7 @@ class DiagnosticSummary(ContractModel):
     judged_calls: Annotated[
         int,
         Field(
-            description="Applicable calls with matching saved verdicts whose only unit errors, if any, are missing Live input."
+            description="Applicable calls with matching saved verdicts whose only unit errors, if any, are missing Live input or speech-fidelity output limits."
         ),
     ]
     not_judged_calls: Annotated[
@@ -46,7 +47,9 @@ class DiagnosticSummary(ContractModel):
     ]
     error_calls: Annotated[
         int,
-        Field(description="Matching saved judge errors other than missing Live input."),
+        Field(
+            description="Matching saved judge errors other than missing Live input or speech-fidelity output limits."
+        ),
     ]
     missing_input_calls: Annotated[
         int, Field(description="Applicable calls missing required audio/reference.")
@@ -77,6 +80,11 @@ class DiagnosticSummary(ContractModel):
         default=0,
         description="Units (within error_units) blocked by missing Live input.",
     )
+    output_limit_units: int = Field(
+        default=0,
+        exclude_if=lambda count: count == 0,
+        description="Speech-fidelity clips (within error_units) whose judge reply hit its output limit; left out of scoring, capped at preparation.",
+    )
     complete: Annotated[
         bool,
         Field(
@@ -99,7 +107,9 @@ def summarize_suite(
     Missing Live transcripts are recording gaps, not judge failures: a verdict
     whose only unit errors are ``input`` errors counts as judged (its blocked
     units stay out of the pass fraction), and a call with no judgeable unit for
-    that reason is excluded and counted in ``input_excluded_calls``. Any other
+    that reason is excluded and counted in ``input_excluded_calls``. A
+    speech-fidelity clip whose reply hit the judge's output limit is likewise
+    left out (``output_limit_units``) without blocking its call. Any other
     judge error still blocks, and a measure with applicable calls needs at
     least one judged call.
     """
@@ -118,7 +128,7 @@ def summarize_suite(
     for measure in dict.fromkeys(item.measure for item in plan.items):
         applicable = judged = not_judged = errors = missing_input = not_applicable = 0
         passed = failed = no_opportunity = error_units = partial = 0
-        excluded = input_units = 0
+        excluded = input_units = limit_units = 0
         for item in (item for item in plan.items if item.measure == measure):
             if item.action == PlanAction.NOT_APPLICABLE:
                 not_applicable += 1
@@ -146,12 +156,16 @@ def summarize_suite(
                 assert row.verdict is not None
                 unit_errors = row.verdict.unit_errors
                 blocked = sum(error.kind == "input" for error in unit_errors)
+                limited = sum(
+                    is_fidelity_output_limit(measure, error) for error in unit_errors
+                )
                 error_units += len(unit_errors)
                 input_units += blocked
+                limit_units += limited
                 partial += bool(unit_errors and row.verdict.units)
-                if blocked < len(unit_errors):
+                if blocked + limited < len(unit_errors):
                     errors += 1
-                elif row.verdict.units or not unit_errors:
+                elif row.verdict.units or not unit_errors or limited:
                     judged += 1
                 else:
                     excluded += 1
@@ -178,6 +192,7 @@ def summarize_suite(
                 partial_calls=partial,
                 input_excluded_calls=excluded,
                 input_error_units=input_units,
+                output_limit_units=limit_units,
                 complete=applicable == judged + excluded
                 and (judged > 0 or not applicable),
                 observed_pass_fraction=passed / (passed + failed)

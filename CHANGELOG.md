@@ -40,9 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generation quality (Experience) is `voice-v2-experience-call-v2`. Live
   speech recorded without a transcript is a recording gap, as in the judge
   diagnostics: those utterances are left out and the rest of the call is
-  scored. v1 left the whole call unscored. Other judge unit errors still leave
-  a call unscored. Only GPT Live packages change: 133 of gpt-live-1's 146
-  unscored calls are now scored (69 pass, 64 fail).
+  scored. v1 left the whole call unscored. A speech-fidelity clip whose judge
+  reply still hits its output limit after retries (the judge runs at
+  temperature 0, so retrying repeats it) affects only its utterance: it counts
+  as an issue when naturalness flagged it and is otherwise left out. Other
+  judge unit errors still leave a call unscored. Only GPT Live packages
+  change: 133 of gpt-live-1's 146 unscored calls are now scored (69 pass, 64
+  fail); no published package has an output-limit clip.
+- `tau2 submit prepare` and `tau2 submit validate` no longer block on
+  speech-fidelity clips that hit the judge's output limit. Diagnostics report
+  them as `output_limit_units` (omitted when zero, so existing packages are
+  unchanged). A package may have at most 0.1% of its speech-fidelity clips
+  left out this way; above that, preparation fails and lists the calls for
+  maintainer review. Timeouts and invalid replies still block.
 - `tau2 submit prepare` and `tau2 submit validate` accept saved voice cells whose
   callers used the submitter's own voices (`TAU2_VOICE_ID_*`), as the submission
   guide asks. The saved persona is compared with the released one without its TTS

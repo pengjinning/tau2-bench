@@ -1074,7 +1074,11 @@ def _incomplete_message(root: Path, frame, summary, judge_coverage) -> str:
 def _benchmark_package(root: Path, preset: str | None):
     """Rewards plus, for judged benchmarks, diagnostics and call quality."""
     from tau2.data_model.benchmark import BenchmarkFrame
-    from tau2.judges.submission import JUDGED_BENCHMARKS, collect_diagnostics
+    from tau2.judges.submission import (
+        JUDGED_BENCHMARKS,
+        collect_diagnostics,
+        output_limit_overage,
+    )
     from tau2.judges.validation import production_catalog
     from tau2.metrics.benchmark import IncompleteSubmissionError, export_submission
     from tau2.runner.presets import infer_preset, verify_frame
@@ -1099,6 +1103,8 @@ def _benchmark_package(root: Path, preset: str | None):
         raise IncompleteSubmissionError(
             _incomplete_message(root, frame, submission.summary, judge_coverage)
         )
+    if diagnostics is not None and (overage := output_limit_overage(diagnostics)):
+        raise IncompleteSubmissionError("\n".join(overage))
     if diagnostics is not None and frame.benchmark_version in QUALITY_BENCHMARKS:
         quality = collect_quality(root, frame, catalog)
     return submission, diagnostics, quality

@@ -25,11 +25,16 @@ naturalness utterance pairs with a fidelity unit. A verdict is complete when it
 has no whole-call error and no unit errors other than input errors: Live
 speech recorded without a transcript is a recording gap, so those utterances
 are left out, as in the judge diagnostics. v1 left the whole call unscored.
+
+A fidelity clip whose judge reply hit its output limit even after retries is
+a judge failure on that utterance alone. The utterance counts as an issue when
+naturalness flagged it and is otherwise left out; the rest of the call is
+scored. Submission preparation caps how many such clips a package may have.
 """
 
 from enum import StrEnum
 
-from tau2.data_model.judges import StoredVerdict
+from tau2.data_model.judges import StoredVerdict, is_fidelity_output_limit
 from tau2.data_model.message import AssistantMessage
 from tau2.data_model.simulation import SimulationRun
 from tau2.metrics.interaction_quality import InteractionMeasurements
@@ -139,17 +144,23 @@ def _complete(verdict: StoredVerdict | None) -> bool:
         verdict is not None
         and verdict.error is None
         and verdict.verdict is not None
-        and all(error.kind == "input" for error in verdict.verdict.unit_errors)
+        and all(
+            error.kind == "input"
+            or is_fidelity_output_limit(verdict.identity.measure, error)
+            for error in verdict.verdict.unit_errors
+        )
     )
 
 
 def experience_counts(
     simulation: SimulationRun, verdicts: dict[str, StoredVerdict]
 ) -> tuple[int, int | None]:
-    """Eligible utterances and utterances with an issue (None if unpaired).
+    """Scored utterances and utterances with an issue (None if unpaired).
 
     Eligible utterances are the naturalness units with an opportunity; units
-    with an input error (no Live transcript) are not units and stay out.
+    with an input error (no Live transcript) are not units and stay out. An
+    eligible utterance whose fidelity clip hit the judge's output limit is
+    scored only when naturalness flagged it, as an issue.
     """
     naturalness = verdicts.get("naturalness")
     fidelity = verdicts.get("speech_fidelity")
@@ -165,18 +176,27 @@ def experience_counts(
     if not (_complete(naturalness) and _complete(fidelity)):
         return len(eligible), None
     clips = {unit.unit_id: unit for unit in fidelity.verdict.units if unit.opportunity}
+    limited = {
+        error.unit_id
+        for error in fidelity.verdict.unit_errors
+        if is_fidelity_output_limit(fidelity.identity.measure, error)
+    }
     if eligible and all(unit_id.startswith(_LIVE_UNIT_PREFIX) for unit_id in eligible):
         pairs = {unit_id: unit_id for unit_id in eligible}
     else:
         pairs = utterance_alignment(simulation)
-    paired = [
-        (eligible[turn], clips[pairs[turn]])
-        for turn in eligible
-        if turn in pairs and pairs[turn] in clips
-    ]
-    if len(paired) != len(eligible):
-        return len(eligible), None
-    return len(eligible), sum(turn.violation or clip.violation for turn, clip in paired)
+    scored = issues = 0
+    for turn_id, turn in eligible.items():
+        clip = pairs.get(turn_id)
+        if clip in clips:
+            scored += 1
+            issues += bool(turn.violation or clips[clip].violation)
+        elif clip in limited:
+            scored += bool(turn.violation)
+            issues += bool(turn.violation)
+        else:
+            return len(eligible), None
+    return scored, issues
 
 
 def utterance_alignment(simulation: SimulationRun) -> dict[str, str]:

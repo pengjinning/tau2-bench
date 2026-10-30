@@ -722,3 +722,107 @@ def test_measure_with_every_call_excluded_is_incomplete(tmp_path):
     report = summarize_suite(plan, stored)[0]
     assert report.input_excluded_calls == 2 and report.judged_calls == 0
     assert not report.complete
+
+
+def _fidelity_rows(tmp_path, backends):
+    """Store one speech-fidelity verdict per input, using one backend per trial."""
+    path = tmp_path / "verdicts.json"
+    execute_suite(
+        inputs(),
+        load_catalog(),
+        path,
+        only=[Measure.SPEECH_FIDELITY],
+        backend=lambda item, *rest: backends[item.trial](item, *rest),
+    )
+    stored = read_verdicts(path)
+    plan = plan_suite(inputs(), load_catalog(), stored, only=[Measure.SPEECH_FIDELITY])
+    return plan, stored
+
+
+def _output_limit(units=True, finish_reason="length"):
+    from tau2.data_model.judges import UnitError
+
+    def backend(*args):
+        result = passing_backend(*args)
+        if not units:
+            result = MeasureVerdict.model_construct(units=[], unit_errors=[])
+        result.unit_errors = [
+            UnitError(
+                unit_id="921",
+                kind="response",
+                error="ValueError: Judge response reached its output token limit",
+                finish_reason=finish_reason,
+            )
+        ]
+        return result
+
+    return backend
+
+
+def test_fidelity_output_limit_is_left_out_not_blocking(tmp_path):
+    from tau2.judges.submission import CellDiagnostics, _cell_rows
+    from tau2.judges.summary import summarize_suite
+
+    plan, stored = _fidelity_rows(
+        tmp_path, [_output_limit(), _output_limit(units=False)]
+    )
+    report = summarize_suite(plan, stored)[0]
+    assert report.complete and report.error_calls == 0
+    assert (report.judged_calls, report.partial_calls) == (2, 1)
+    assert report.error_units == report.output_limit_units == 2
+    fingerprints, _ = _cell_rows(plan.items, stored)
+    assert [row.output_limit_units for row in fingerprints] == [1, 1]
+    cell = CellDiagnostics(
+        language="pt", domain="retail", summary=[report], verdicts=fingerprints
+    )
+    assert CellDiagnostics.model_validate_json(cell.model_dump_json()) == cell
+    forged = cell.model_dump()
+    forged["verdicts"][0]["output_limit_units"] = 0
+    with pytest.raises(ValueError, match="does not match verdict fingerprints"):
+        CellDiagnostics.model_validate(forged)
+    # Packages without such clips serialize exactly as before.
+    plan, stored = _fidelity_rows(tmp_path / "clean", [passing_backend] * 2)
+    clean = summarize_suite(plan, stored)[0]
+    assert "output_limit_units" not in clean.model_dump_json()
+    fingerprints, _ = _cell_rows(plan.items, stored)
+    assert "output_limit_units" not in fingerprints[0].model_dump_json()
+
+
+def test_other_fidelity_response_errors_still_block(tmp_path):
+    from tau2.judges.summary import summarize_suite
+
+    plan, stored = _fidelity_rows(
+        tmp_path, [_output_limit(finish_reason=None), passing_backend]
+    )
+    report = summarize_suite(plan, stored)[0]
+    assert not report.complete and report.error_calls == 1
+    assert report.output_limit_units == 0
+    # The same limit on another measure is still a judge error.
+    plan, stored = _live_input_rows(tmp_path / "nat", [_output_limit()] * 2)
+    report = summarize_suite(plan, stored)[0]
+    assert not report.complete and report.error_calls == 2
+
+
+def test_output_limit_clips_are_capped_per_package():
+    from types import SimpleNamespace
+
+    from tau2.judges.submission import output_limit_overage
+
+    def package(limited, judged):
+        row = SimpleNamespace(simulation_id="sim", trial=0, output_limit_units=limited)
+        summary = SimpleNamespace(
+            measure="speech_fidelity",
+            pass_units=judged - limited,
+            fail_units=0,
+            output_limit_units=limited,
+        )
+        cell = SimpleNamespace(
+            language="es", domain="airline", summary=[summary], verdicts=[row]
+        )
+        return SimpleNamespace(cells=[cell])
+
+    assert output_limit_overage(package(0, 900)) == []
+    assert output_limit_overage(package(2, 2000)) == []
+    lines = output_limit_overage(package(3, 2000))
+    assert "3 of 2000" in lines[0]
+    assert lines[1] == "  es-airline sim trial 0: 3 clip(s)"

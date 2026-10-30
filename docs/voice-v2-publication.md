@@ -76,7 +76,9 @@ submission: Interaction from each scored call's saved ticks plus its saved
 leaves the affected component unknown or the call's Experience unscored.
 Utterances blocked by a missing Live transcript are the exception: as in judge
 diagnostics, they are left out and the rest of the call is scored
-(`voice-v2-experience-call-v2`). Infrastructure-error calls carry no quality
+(`voice-v2-experience-call-v2`). So is an utterance whose speech-fidelity clip
+hit the judge's output limit after retries, unless naturalness flagged it
+(then it counts as an issue); preparation caps these at 0.1% of clips. Infrastructure-error calls carry no quality
 record. Outside Live
 runs the two judges number utterances differently. Pairing follows the agent
 chunk groups of the saved ticks (`utterance_alignment`), never ordinal
