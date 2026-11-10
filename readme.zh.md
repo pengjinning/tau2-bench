@@ -19,6 +19,29 @@
 9. [智谱模型路由规则](#智谱模型路由规则)
 10. [常用命令速查](#常用命令速查)
 11. [常见问题](#常见问题)
+12. [微语 Agent 评测平台前端](#微语-agent-评测平台前端)
+
+---
+
+## 微语 Agent 评测平台前端
+
+微语是基于 TypeScript、React 和 Ant Design 的评测工作台，位于
+[web/evaluation](./web/evaluation/README.md)，支持配置文本评测、选择本地化任务、
+调用后端 API、查看奖励检查与对话，以及保存和导出历史结果。
+
+```bash
+# 仓库根目录启动后端（API Key 保持在后端 .env 中）
+UV_FROZEN=1 uv run uvicorn tau2.api_service.simulation_service:app --host 127.0.0.1 --port 8001
+
+# 另一个终端启动前端（Node.js ^20.19.0 / ^22.13.0 / >=24）
+cd web/evaluation
+npm ci
+npm run dev
+```
+
+开发代理指向 `127.0.0.1:8001`。生产部署需要同源反向代理和访问控制，
+不要将无鉴权的评测接口直接公开。包括 mock 域在内的真实运行会调用模型并产生费用；
+测试命令与部署说明见[前端文档](./web/evaluation/README.md)。
 
 ---
 
@@ -160,7 +183,7 @@ uv run tau2 run --domain retail \
 ### 多语言(τ-i18n)
 
 ```bash
-uv run tau2 run --domain retail --language es --num-tasks 5
+uv run tau2 run --domain retail --language zh --num-tasks 5
 ```
 
 `--language` 可选:`en` `es` `pt` `hi` `zh` `ko`。`zh` 即中文语言包(本地化任务、数据库与用户 persona)。
@@ -381,4 +404,3 @@ A: `uv sync --extra dev` 后 `make test`、`make check-all`(pre-commit 强制)�
 - [docs/cli-reference.md](./docs/cli-reference.md) — 全命令参考
 - [docs/glossary.md](./docs/glossary.md) — pack / cell / frame / pin 等术语
 - [readme.zn.md](./readme.zn.md) — 环境问题排查记录(中文)
-

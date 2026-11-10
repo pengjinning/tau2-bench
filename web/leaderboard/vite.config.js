@@ -9,5 +9,8 @@ export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? (process.env.GITHUB_PAGES_BASE || '/') : '/',
   build: {
     outDir: 'dist'
-  }
+  },
+  server: {
+    port: 5273,
+  },
 })

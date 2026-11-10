@@ -1016,6 +1016,7 @@ def run_tasks(
     evaluation_type: EvaluationType = EvaluationType.ALL,
     console_display: bool = True,
     results_format: str = "json",
+    stop_event: Optional[threading.Event] = None,
 ) -> Results:
     """Run simulations for a list of tasks with concurrency, checkpointing, and retries.
 
@@ -1035,6 +1036,11 @@ def run_tasks(
         save_dir: Directory for saving logs, audio, etc. If None, derived from save_path.
         evaluation_type: Evaluation type to use for all simulations.
         console_display: Whether to show console output for each simulation.
+        stop_event: When set, no new tasks are started. In-flight simulations
+            run to completion (their results are checkpointed), and the partial
+            Results are returned once all workers finish. The event is also
+            forwarded to the internal shutdown machinery so monitor and
+            checkpoint logic see the same stop signal.
 
     Returns:
         Results object with all simulation runs.
@@ -1119,6 +1125,19 @@ def run_tasks(
     queue = WorkQueue(prep.units, max_attempts=1, lease_ttl_seconds=float("inf"))
     results_lock = threading.Lock()
     fatal_stop = threading.Event()
+    shutdown_event = threading.Event()
+
+    # An external stop request and Ctrl+C share the shutdown machinery: no new
+    # leases are taken, in-flight simulations finish and are checkpointed. The
+    # two differ after the loop — Ctrl+C force-exits, an external stop returns
+    # partial Results like a normal completion.
+    if stop_event is not None:
+
+        def _watch_stop() -> None:
+            stop_event.wait()
+            shutdown_event.set()
+
+        threading.Thread(target=_watch_stop, daemon=True, name="stop-relay").start()
 
     def _consume(consumer_idx: int) -> None:
         worker_id = f"local-{consumer_idx}"
@@ -1134,6 +1153,15 @@ def run_tasks(
                     unit.seed,
                     unit.progress_str,
                 )
+            except KeyboardInterrupt as e:
+                # Graceful stop: run_unit raises this before starting work when
+                # the shutdown event is set. Release the unstarted unit and end
+                # this consumer without letting KeyboardInterrupt reach the
+                # main thread (that path force-exits the process).
+                queue.fail(
+                    unit.unit_id, str(e) or "Shutdown requested", worker_id=worker_id
+                )
+                return
             except BaseException as e:
                 queue.fail(unit.unit_id, str(e), worker_id=worker_id)
                 if isinstance(e, NonRetryableError):
@@ -1175,6 +1203,14 @@ def run_tasks(
             executor.shutdown(
                 wait=not fatal_stop.is_set(), cancel_futures=fatal_stop.is_set()
             )
+
+    if stop_event is not None and stop_event.is_set():
+        n = len(simulation_results.simulations)
+        ConsoleDisplay.console.print(
+            f"\n[bold yellow]Stop requested — returning {n} completed simulation(s). "
+            "Remaining tasks can be resumed with the same save path.[/bold yellow]\n"
+        )
+        return simulation_results
 
     ConsoleDisplay.console.print(
         "\n[bold green]Successfully completed all simulations![/bold green]\n"
@@ -1229,7 +1265,9 @@ def _run_save_paths(config: RunConfig) -> tuple[str, Path, Path, str]:
     return run_name, save_dir, save_path, results_format
 
 
-def run_domain(config: RunConfig) -> Results:
+def run_domain(
+    config: RunConfig, stop_event: Optional[threading.Event] = None
+) -> Results:
     """Run simulations for a domain from a RunConfig.
 
     This is the main entry point for the CLI and API. It:
@@ -1241,6 +1279,9 @@ def run_domain(config: RunConfig) -> Results:
 
     Args:
         config: Full run configuration.
+        stop_event: Optional stop signal. When set, no new tasks are started;
+            in-flight simulations finish and are checkpointed; the partial
+            Results are returned.
 
     Returns:
         Results object with all simulation runs.
@@ -1261,6 +1302,7 @@ def run_domain(config: RunConfig) -> Results:
         save_path=save_path,
         save_dir=save_dir,
         results_format=results_format,
+        stop_event=stop_event,
     )
 
     # Compute and display metrics

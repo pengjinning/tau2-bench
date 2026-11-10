@@ -9,6 +9,9 @@ class GetTasksRequest(BaseModel):
     """
 
     domain: str
+    language: str | None = None
+    task_split_name: str | None = "base"
+    agent: str = "llm_agent"
 
 
 class GetTasksResponse(BaseModel):

@@ -1,0 +1,74 @@
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-sider {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
+  padding: 16px 12px;
+  gap: 16px;
+}
+
+.app-logo {
+  padding: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.88);
+  letter-spacing: 0.5px;
+}
+
+.app-logo-sub {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.65;
+  margin-top: 2px;
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-nav-btn {
+  text-align: left;
+  height: 40px;
+}
+
+.app-sider-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .app-shell { flex-direction: column; }
+  .app-sider { width: auto; padding: 8px 12px; gap: 8px; }
+  .app-logo { font-size: 16px; padding: 0; }
+  .app-logo-sub { display: none; }
+  .app-nav { flex-direction: row; }
+  .app-sider-footer { margin-top: 0; padding: 0; }
+  .app-main { padding: 12px; }
+}
+
+@media (max-width: 576px) {
+  .app-main .ant-form .ant-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
